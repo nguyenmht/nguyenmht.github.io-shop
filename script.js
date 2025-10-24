@@ -11,6 +11,7 @@ const dom = {
   input: document.getElementById("product-input"),
   feedback: document.getElementById("feedback"),
   results: document.getElementById("results"),
+  picker: document.getElementById("product-picker"),
 };
 
 renderInfo("Đang tải dữ liệu sản phẩm…");
@@ -24,6 +25,8 @@ async function bootstrap() {
     }
     const rawText = await response.text();
     state.products = parseSource(rawText);
+    state.orderedProductIds = Array.from(state.products.keys());
+    renderProductPicker();
     state.ready = true;
     renderInfo("Dữ liệu đã sẵn sàng. Nhập ID sản phẩm và bấm Tra cứu.");
   } catch (error) {
@@ -48,26 +51,7 @@ async function bootstrap() {
       return;
     }
 
-    const tokens = rawValue
-      .split(";")
-      .map((token) => token.trim())
-      .filter(Boolean);
-
-    const uniqueIds = new Set();
-    const parsedIds = [];
-    const invalidTokens = [];
-
-    tokens.forEach((token) => {
-      const resolved = resolveProductId(token);
-      if (!resolved) {
-        invalidTokens.push(token);
-        return;
-      }
-      if (!uniqueIds.has(resolved)) {
-        uniqueIds.add(resolved);
-        parsedIds.push(resolved);
-      }
-    });
+    const { ids: parsedIds, invalidTokens } = parseInputValue(rawValue);
 
     if (!parsedIds.length) {
       const errors = ["Không tìm thấy ID hợp lệ sau khi xử lý đầu vào."];
@@ -86,16 +70,67 @@ async function bootstrap() {
     processQuery(parsedIds, invalidTokens);
   });
 
-  dom.input.addEventListener("keydown", (event) => {
-    if (event.isComposing) {
+  dom.input.addEventListener("keydown", handleInputKeydown);
+  dom.input.addEventListener("input", handleInputChange);
+}
+
+function handleInputKeydown(event) {
+  if (event.isComposing) {
+    return;
+  }
+  const isModifier = event.shiftKey || event.ctrlKey || event.altKey || event.metaKey;
+  if (event.key === "Enter" && !isModifier) {
+    event.preventDefault();
+    dom.form.requestSubmit();
+  }
+}
+
+function handleInputChange(event) {
+  const { ids, invalidTokens, unknownTokens } = parseInputValue(dom.input.value);
+  syncPickerSelection(ids);
+
+  const fromPicker = event && event.syntheticSource === "picker";
+  if (
+    state.ready &&
+    ids.length &&
+    invalidTokens.length === 0 &&
+    (fromPicker || unknownTokens.length === 0)
+  ) {
+    dom.form.requestSubmit();
+  }
+}
+
+function parseInputValue(rawValue) {
+  if (!rawValue) {
+    return { ids: [], invalidTokens: [], unknownTokens: [] };
+  }
+
+  const tokens = rawValue
+    .split(";")
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  const uniqueIds = new Set();
+  const parsedIds = [];
+  const invalidTokens = [];
+  const unknownTokens = [];
+
+  tokens.forEach((token) => {
+    const resolved = resolveProductId(token);
+    if (!resolved) {
+      invalidTokens.push(token);
       return;
     }
-    const isModifier = event.shiftKey || event.ctrlKey || event.altKey || event.metaKey;
-    if (event.key === "Enter" && !isModifier) {
-      event.preventDefault();
-      dom.form.requestSubmit();
+    if (!state.products.has(resolved)) {
+      unknownTokens.push(token);
+    }
+    if (!uniqueIds.has(resolved)) {
+      uniqueIds.add(resolved);
+      parsedIds.push(resolved);
     }
   });
+
+  return { ids: parsedIds, invalidTokens, unknownTokens };
 }
 
 function resolveProductId(token) {
@@ -212,6 +247,88 @@ function formatWord(word) {
   if (!word) return "";
   if (word.length <= 3) return word.toUpperCase();
   return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+function renderProductPicker() {
+  if (!dom.picker) return;
+  dom.picker.innerHTML = "";
+
+  const fragment = document.createDocumentFragment();
+
+  state.orderedProductIds.forEach((productId) => {
+    const product = state.products.get(productId);
+    if (!product) return;
+    const label = document.createElement("label");
+    label.className = "product-chip";
+    label.dataset.productId = product.id;
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = product.id;
+    checkbox.className = "product-chip-input";
+
+    const idTag = document.createElement("span");
+    idTag.className = "product-chip-id";
+    idTag.textContent = product.id.toUpperCase();
+
+    label.appendChild(checkbox);
+    label.appendChild(idTag);
+    fragment.appendChild(label);
+  });
+
+  dom.picker.appendChild(fragment);
+
+  if (!dom.picker.dataset.bound) {
+    dom.picker.addEventListener("change", handlePickerChange);
+    dom.picker.addEventListener("keydown", handlePickerKeydown);
+    dom.picker.dataset.bound = "true";
+  }
+
+  const { ids } = parseInputValue(dom.input.value);
+  syncPickerSelection(ids);
+}
+
+function handlePickerChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) || target.type !== "checkbox") {
+    return;
+  }
+  syncInputFromPicker();
+}
+
+function handlePickerKeydown(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) || target.type !== "checkbox" || event.key !== "Enter") {
+    return;
+  }
+  event.preventDefault();
+  target.checked = !target.checked;
+  syncInputFromPicker();
+}
+
+function syncInputFromPicker() {
+  const selected = getSelectedIdsFromPicker();
+  dom.input.value = selected.join(";");
+  const syntheticEvent = new Event("input", { bubbles: true });
+  syntheticEvent.syntheticSource = "picker";
+  dom.input.dispatchEvent(syntheticEvent);
+}
+
+function getSelectedIdsFromPicker() {
+  if (!dom.picker) return [];
+  return Array.from(
+    dom.picker.querySelectorAll('input[type="checkbox"]:checked'),
+    (input) => input.value
+  );
+}
+
+function syncPickerSelection(ids) {
+  if (!dom.picker) return;
+  const selectedSet = new Set(ids);
+  const checkboxes = dom.picker.querySelectorAll('input[type="checkbox"]');
+  checkboxes.forEach((checkbox) => {
+    checkbox.checked = selectedSet.has(checkbox.value);
+  });
 }
 
 function processQuery(productIds, invalidTokens = []) {

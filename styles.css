@@ -102,6 +102,46 @@ body {
   margin: 0;
 }
 
+.product-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.product-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(63, 121, 255, 0.25);
+  box-shadow: 0 6px 18px rgba(63, 121, 255, 0.12);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  font-weight: 600;
+  color: var(--accent-dark);
+}
+
+.product-chip:hover,
+.product-chip:focus-within {
+  transform: translateY(-0.5px);
+  box-shadow: 0 10px 24px rgba(63, 121, 255, 0.18);
+}
+
+.product-chip-input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.product-chip-id {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -317,16 +357,25 @@ textarea:focus {
     box-shadow: 0 24px 50px rgba(70, 128, 255, 0.18);
   }
 
-  .input-row {
-    flex-direction: column;
+  .product-picker {
+    gap: 0.45rem;
   }
 
-  .btn-primary {
-    width: 100%;
+  .input-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   textarea {
     min-height: 140px;
+    width: min(100%, 50vw);
+    max-width: 380px;
+  }
+
+  .btn-primary {
+    width: min(100%, 50vw);
+    max-width: 380px;
   }
 }
 
