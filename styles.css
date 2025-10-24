@@ -368,14 +368,12 @@ textarea:focus {
   }
 
   textarea {
-    min-height: 140px;
-    width: min(100%, 50vw);
-    max-width: 380px;
+    width: 100%;
+    min-height: 70px;
   }
 
   .btn-primary {
-    width: min(100%, 50vw);
-    max-width: 380px;
+    width: 100%;
   }
 }
 
