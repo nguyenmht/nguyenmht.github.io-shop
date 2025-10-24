@@ -48,22 +48,42 @@ async function bootstrap() {
       return;
     }
 
-    const parsedIds = Array.from(
-      new Set(
-        rawValue
-          .split(";")
-          .map((token) => token.trim().toLowerCase())
-          .filter(Boolean)
-      )
-    );
+    const tokens = rawValue
+      .split(";")
+      .map((token) => token.trim())
+      .filter(Boolean);
+
+    const uniqueIds = new Set();
+    const parsedIds = [];
+    const invalidTokens = [];
+
+    tokens.forEach((token) => {
+      const resolved = resolveProductId(token);
+      if (!resolved) {
+        invalidTokens.push(token);
+        return;
+      }
+      if (!uniqueIds.has(resolved)) {
+        uniqueIds.add(resolved);
+        parsedIds.push(resolved);
+      }
+    });
 
     if (!parsedIds.length) {
-      renderError(["Không tìm thấy ID hợp lệ sau khi xử lý đầu vào."]);
+      const errors = ["Không tìm thấy ID hợp lệ sau khi xử lý đầu vào."];
+      if (invalidTokens.length) {
+        errors.push(
+          `Các giá trị không hợp lệ: ${invalidTokens
+            .map((token) => `"${token}"`)
+            .join(", ")}`
+        );
+      }
+      renderError(errors);
       dom.results.innerHTML = "";
       return;
     }
 
-    processQuery(parsedIds);
+    processQuery(parsedIds, invalidTokens);
   });
 
   dom.input.addEventListener("keydown", (event) => {
@@ -76,6 +96,30 @@ async function bootstrap() {
       dom.form.requestSubmit();
     }
   });
+}
+
+function resolveProductId(token) {
+  if (!token) return null;
+  const plain = token.trim();
+  if (!plain) return null;
+
+  if (/^[a-z0-9]+$/i.test(plain)) {
+    return plain.toLowerCase();
+  }
+
+  try {
+    const url = new URL(plain);
+    const slug = url.pathname.split("/").filter(Boolean).pop();
+    if (!slug) return null;
+    const cleanSlug = slug.split("?")[0].split("#")[0] || slug;
+    return extractProductId(cleanSlug);
+  } catch (error) {
+    const parts = plain.split("/");
+    const slug = parts.pop();
+    if (!slug) return null;
+    const cleanSlug = slug.split("?")[0].split("#")[0] || slug;
+    return extractProductId(cleanSlug);
+  }
 }
 
 function parseSource(text) {
@@ -170,7 +214,7 @@ function formatWord(word) {
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
-function processQuery(productIds) {
+function processQuery(productIds, invalidTokens = []) {
   const warnings = [];
   const errors = [];
   const unavailable = [];
@@ -191,6 +235,14 @@ function processQuery(productIds) {
     availableProducts.push(product);
     productIndex.set(id, product);
   });
+
+  if (invalidTokens.length) {
+    errors.push(
+      `Không nhận diện được: ${invalidTokens
+        .map((token) => `"${token}"`)
+        .join(", ")}`
+    );
+  }
 
   if (missing.length) {
     errors.push(
