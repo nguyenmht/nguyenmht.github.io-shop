@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PNJ Store Availability</title>
+    <meta
+      name="description"
+      content="Tra cứu nhanh những cửa hàng có sản phẩm PNJ dựa trên danh sách ID."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero-content">
+        <h1>Tra cứu sản phẩm PNJ</h1>
+        <p>
+          Nhập danh sách <strong>ID sản phẩm</strong> (cách nhau bằng dấu chấm
+          phẩy <code>;</code>) để xem nên ghé những cửa hàng nào.
+        </p>
+      </div>
+    </header>
+    <main class="container">
+      <section class="card" aria-labelledby="form-title">
+        <form id="product-form" novalidate>
+          <div class="form-header">
+            <h2 id="form-title">Nhập danh sách sản phẩm</h2>
+            <p class="muted">
+              Ví dụ:
+              <code>xmxmk000065;xm00w000083;xm00w060021</code>
+            </p>
+          </div>
+          <label for="product-input" class="sr-only">
+            Danh sách ID sản phẩm
+          </label>
+          <div class="input-row">
+            <textarea
+              id="product-input"
+              name="products"
+              rows="3"
+              placeholder="Nhập ID sản phẩm, ví dụ: xmxmk000065;xm00w060013"
+              required
+            ></textarea>
+            <button type="submit" class="btn-primary">Tra cứu</button>
+          </div>
+          <p class="muted">
+            * Hệ thống sẽ tự động nhận diện sản phẩm hết hàng hoặc không tìm
+            thấy trong dữ liệu.
+          </p>
+        </form>
+      </section>
+
+      <section id="feedback" class="feedback" aria-live="polite"></section>
+      <section id="results" class="results"></section>
+    </main>
+
+    <footer class="footer">
+      <small>© 2024 PNJ Store Finder · Dữ liệu cập nhật từ Source.txt</small>
+    </footer>
+
+    <script src="script.js" type="module"></script>
+  </body>
+</html>
